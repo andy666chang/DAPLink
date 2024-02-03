@@ -2866,7 +2866,7 @@
     (property "Datasheet" "" (at 71.12 96.52 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid e98e8a69-ddff-452c-9298-3238f8e09e46))
+    (pin "1" (uuid 62bbd41d-0a93-48fe-9201-73d52df9233f))
     (instances
       (project "daplink"
         (path "/4a115916-3823-4e44-9c09-968e75df0e9b"
@@ -2911,13 +2911,13 @@
     )
   )
 
-  (symbol (lib_id "Connector_Generic:Conn_01x05") (at 80.01 101.6 0) (unit 1)
+  (symbol (lib_id "Connector_Generic:Conn_01x05") (at 80.01 101.6 0) (mirror x) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 9a109098-9e0f-4672-9882-e13ff632c922)
-    (property "Reference" "J2" (at 82.55 100.33 0)
+    (property "Reference" "J2" (at 82.55 102.87 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "Conn_01x05" (at 82.55 102.87 0)
+    (property "Value" "Conn_01x05" (at 82.55 100.33 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Connector_Harwin:Harwin_M20-89005xx_1x05_P2.54mm_Horizontal" (at 80.01 101.6 0)
