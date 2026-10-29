@@ -1,0 +1,367 @@
+diff --git a/projects.yaml b/projects.yaml
+index 019b317a..35efd7f3 100644
+--- a/projects.yaml
++++ b/projects.yaml
+@@ -200,7 +200,20 @@ projects:
+         - records/hic_hal/stm32f103xb.yaml
+         - records/board/stm32f103xb_bl.yaml
+     stm32f103xb_if:
+-        - *module_if
++        # module_if without usb-msc / drag-n-drop (no file system)
++        - *module_tools
++        - records/usb/usb-core.yaml
++        - records/usb/usb-cdc.yaml
++        - records/usb/usb-webusb.yaml
++        - records/usb/usb-winusb.yaml
++        - records/daplink/cmsis-dap.yaml
++        - records/daplink/usb2uart.yaml
++        - records/daplink/settings.yaml
++        - records/daplink/settings_rom.yaml
++        - records/daplink/interface.yaml
++        - records/daplink/target_family.yaml
++        - records/daplink/target_board.yaml
++        - records/daplink/drag-n-drop-headers.yaml
+         - *module_hic_stm32f103xb
+         - records/family/all_family.yaml
+         - records/usb/usb-bulk.yaml
+diff --git a/records/daplink/drag-n-drop-headers.yaml b/records/daplink/drag-n-drop-headers.yaml
+new file mode 100644
+index 00000000..3b6cb983
+--- /dev/null
++++ b/records/daplink/drag-n-drop-headers.yaml
+@@ -0,0 +1,3 @@
++common:
++    includes:
++        - source/daplink/drag-n-drop
+diff --git a/records/tools/gcc_arm.yaml b/records/tools/gcc_arm.yaml
+index 3ca532e6..538b1997 100644
+--- a/records/tools/gcc_arm.yaml
++++ b/records/tools/gcc_arm.yaml
+@@ -27,7 +27,6 @@ tool_specific:
+                 - --specs=nano.specs
+                 - --specs=nosys.specs
+                 - -Wl,-check-sections
+-                - -Wl,-fatal-warnings
+                 - -Wl,--gc-sections
+                 - -Wl,--no-wchar-size-warning
+                 - -Wl,--print-memory-usage
+diff --git a/source/daplink/cmsis-dap/DAP_vendor.c b/source/daplink/cmsis-dap/DAP_vendor.c
+index 91dcb17f..b7e0796d 100644
+--- a/source/daplink/cmsis-dap/DAP_vendor.c
++++ b/source/daplink/cmsis-dap/DAP_vendor.c
+@@ -167,7 +167,6 @@ uint32_t DAP_ProcessVendorCommand(const uint8_t *request, uint8_t *response) {
+         num += ((write_len + 1) << 16) | 1;
+         break;
+     }
+-#endif
+     case ID_DAP_SelectEraseMode: {
+         // switching between chip erase and page erase
+         //              COMMAND(OUT Packet)
+@@ -187,6 +186,7 @@ uint32_t DAP_ProcessVendorCommand(const uint8_t *request, uint8_t *response) {
+         num += (1U << 16) | 1U; // increment request and response count each by 1
+         break;
+     }
++#endif
+     case ID_DAP_Vendor14: break;
+     case ID_DAP_Vendor15: break;
+     case ID_DAP_Vendor16: break;
+diff --git a/source/hic_hal/stm32/stm32f103xb/DAP_config.h b/source/hic_hal/stm32/stm32f103xb/DAP_config.h
+index 34013e77..60b639d4 100644
+--- a/source/hic_hal/stm32/stm32f103xb/DAP_config.h
++++ b/source/hic_hal/stm32/stm32f103xb/DAP_config.h
+@@ -90,13 +90,13 @@ This information includes:
+ 
+ /// Indicate that UART Serial Wire Output (SWO) trace is available.
+ /// This information is returned by the command \ref DAP_Info as part of <b>Capabilities</b>.
+-#define SWO_UART                0               ///< SWO UART:  1 = available, 0 = not available
++#define SWO_UART                1               ///< SWO UART:  1 = available, 0 = not available
+ 
+ /// USART Driver instance number for the UART SWO.
+-#define SWO_UART_DRIVER         0               ///< USART Driver instance number (Driver_USART#).
++#define SWO_UART_DRIVER         1               ///< USART Driver instance number (Driver_USART#).
+ 
+ /// Maximum SWO UART Baudrate
+-#define SWO_UART_MAX_BAUDRATE   10000000U       ///< SWO UART Maximum Baudrate in Hz
++#define SWO_UART_MAX_BAUDRATE   4500000U        ///< SWO UART Maximum Baudrate in Hz
+ 
+ /// Indicate that Manchester Serial Wire Output (SWO) trace is available.
+ /// This information is returned by the command \ref DAP_Info as part of <b>Capabilities</b>.
+diff --git a/source/hic_hal/stm32/stm32f103xb/IO_Config.h b/source/hic_hal/stm32/stm32f103xb/IO_Config.h
+index de9a4667..4bbf2811 100644
+--- a/source/hic_hal/stm32/stm32f103xb/IO_Config.h
++++ b/source/hic_hal/stm32/stm32f103xb/IO_Config.h
+@@ -64,6 +64,17 @@ COMPILER_ASSERT(DAPLINK_HIC_ID == DAPLINK_HIC_ID_STM32F103XB);
+ #define SWDIO_IN_PIN                 GPIO_PIN_12
+ #define SWDIO_IN_PIN_Bit             12
+ 
++//SWO UART (TGT_SWO on PA10 / USART1_RX)
++#define SWO_USART                     USART1
++#define SWO_USART_PCLK                72000000U
++#define SWO_USART_CLK_ENABLE()        __HAL_RCC_USART1_CLK_ENABLE()
++#define SWO_USART_CLK_DISABLE()       __HAL_RCC_USART1_CLK_DISABLE()
++#define SWO_USART_IRQn                USART1_IRQn
++#define SWO_USART_IRQn_Handler        USART1_IRQHandler
++#define SWO_RX_PORT_ENABLE()         __HAL_RCC_GPIOA_CLK_ENABLE()
++#define SWO_RX_PORT                  GPIOA
++#define SWO_RX_PIN                   GPIO_PIN_10
++
+ //LEDs
+ //USB status LED
+ #define RUNNING_LED_PORT             GPIOA
+diff --git a/source/hic_hal/stm32/stm32f103xb/swo_uart.c b/source/hic_hal/stm32/stm32f103xb/swo_uart.c
+new file mode 100644
+index 00000000..7e4ce81b
+--- /dev/null
++++ b/source/hic_hal/stm32/stm32f103xb/swo_uart.c
+@@ -0,0 +1,251 @@
++/**
++ * @file    swo_uart.c
++ * @brief   Minimal CMSIS-Driver USART (receive only) for SWO UART capture
++ *
++ * DAPLink Interface Firmware
++ * SPDX-License-Identifier: Apache-2.0
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License"); you may
++ * not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ * http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "stm32f1xx.h"
++#include "DAP_config.h"
++#include "Driver_USART.h"
++#include "IO_Config.h"
++
++#if (SWO_UART != 0)
++
++static ARM_USART_SignalEvent_t cb_event;
++static uint8_t *volatile rx_buf;
++static volatile uint32_t rx_num;
++static volatile uint32_t rx_cnt;
++static volatile uint8_t  rx_busy;
++static volatile uint8_t  rx_overflow;
++
++static ARM_DRIVER_VERSION GetVersion(void)
++{
++    ARM_DRIVER_VERSION v = { ARM_USART_API_VERSION, ARM_DRIVER_VERSION_MAJOR_MINOR(1, 0) };
++    return v;
++}
++
++static ARM_USART_CAPABILITIES GetCapabilities(void)
++{
++    ARM_USART_CAPABILITIES cap = { 0 };
++    cap.asynchronous = 1;
++    cap.event_rx_timeout = 0;
++    return cap;
++}
++
++static int32_t Initialize(ARM_USART_SignalEvent_t cb)
++{
++    cb_event = cb;
++    rx_busy = 0;
++    return ARM_DRIVER_OK;
++}
++
++static int32_t Uninitialize(void)
++{
++    cb_event = 0;
++    return ARM_DRIVER_OK;
++}
++
++static int32_t PowerControl(ARM_POWER_STATE state)
++{
++    GPIO_InitTypeDef gpio;
++
++    switch (state) {
++        case ARM_POWER_FULL:
++            SWO_USART_CLK_ENABLE();
++            SWO_RX_PORT_ENABLE();
++            gpio.Pin = SWO_RX_PIN;
++            gpio.Mode = GPIO_MODE_INPUT;
++            gpio.Pull = GPIO_PULLUP;
++            gpio.Speed = GPIO_SPEED_FREQ_HIGH;
++            HAL_GPIO_Init(SWO_RX_PORT, &gpio);
++            SWO_USART->CR1 = 0;
++            NVIC_ClearPendingIRQ(SWO_USART_IRQn);
++            NVIC_EnableIRQ(SWO_USART_IRQn);
++            return ARM_DRIVER_OK;
++        case ARM_POWER_OFF:
++            NVIC_DisableIRQ(SWO_USART_IRQn);
++            SWO_USART->CR1 = 0;
++            SWO_USART_CLK_DISABLE();
++            rx_busy = 0;
++            return ARM_DRIVER_OK;
++        default:
++            return ARM_DRIVER_ERROR_UNSUPPORTED;
++    }
++}
++
++static int32_t Send(const void *data, uint32_t num)
++{
++    return ARM_DRIVER_ERROR_UNSUPPORTED;
++}
++
++static int32_t Receive(void *data, uint32_t num)
++{
++    uint32_t primask;
++
++    if ((data == 0) || (num == 0)) {
++        return ARM_DRIVER_ERROR_PARAMETER;
++    }
++    if (rx_busy) {
++        return ARM_DRIVER_ERROR_BUSY;
++    }
++    primask = __get_PRIMASK();
++    __disable_irq();
++    rx_buf = (uint8_t *)data;
++    rx_num = num;
++    rx_cnt = 0;
++    rx_busy = 1;
++    __set_PRIMASK(primask);
++    return ARM_DRIVER_OK;
++}
++
++static int32_t Transfer(const void *data_out, void *data_in, uint32_t num)
++{
++    return ARM_DRIVER_ERROR_UNSUPPORTED;
++}
++
++static uint32_t GetTxCount(void)
++{
++    return 0;
++}
++
++static uint32_t GetRxCount(void)
++{
++    return rx_cnt;
++}
++
++static int32_t Control(uint32_t control, uint32_t arg)
++{
++    uint32_t div;
++
++    switch (control & ARM_USART_CONTROL_Msk) {
++        case ARM_USART_MODE_ASYNCHRONOUS:
++            if (((control & ARM_USART_DATA_BITS_Msk) != ARM_USART_DATA_BITS_8) ||
++                ((control & ARM_USART_PARITY_Msk) != ARM_USART_PARITY_NONE) ||
++                ((control & ARM_USART_STOP_BITS_Msk) != ARM_USART_STOP_BITS_1)) {
++                return ARM_USART_ERROR_DATA_BITS;
++            }
++            if ((arg == 0) || (arg > SWO_UART_MAX_BAUDRATE)) {
++                return ARM_USART_ERROR_BAUDRATE;
++            }
++            // 16x oversampling: BRR = mantissa<<4 | fraction, i.e. round(PCLK / baud)
++            div = (SWO_USART_PCLK + (arg / 2)) / arg;
++            if (div < 16) {
++                return ARM_USART_ERROR_BAUDRATE;
++            }
++            SWO_USART->CR1 &= ~USART_CR1_UE;
++            SWO_USART->CR2 = 0;
++            SWO_USART->CR3 = 0;
++            SWO_USART->BRR = div;
++            SWO_USART->CR1 |= USART_CR1_UE;
++            return ARM_DRIVER_OK;
++
++        case ARM_USART_CONTROL_RX:
++            if (arg) {
++                // Flush stale data/errors before enabling the receiver
++                (void)SWO_USART->SR;
++                (void)SWO_USART->DR;
++                rx_overflow = 0;
++                SWO_USART->CR1 |= USART_CR1_UE | USART_CR1_RE | USART_CR1_RXNEIE;
++            } else {
++                SWO_USART->CR1 &= ~(USART_CR1_RE | USART_CR1_RXNEIE);
++            }
++            return ARM_DRIVER_OK;
++
++        case ARM_USART_ABORT_RECEIVE:
++            rx_busy = 0;
++            return ARM_DRIVER_OK;
++
++        default:
++            return ARM_DRIVER_ERROR_UNSUPPORTED;
++    }
++}
++
++static ARM_USART_STATUS GetStatus(void)
++{
++    ARM_USART_STATUS status = { 0 };
++    status.rx_busy = rx_busy;
++    status.rx_overflow = rx_overflow;
++    return status;
++}
++
++static int32_t SetModemControl(ARM_USART_MODEM_CONTROL control)
++{
++    return ARM_DRIVER_ERROR_UNSUPPORTED;
++}
++
++static ARM_USART_MODEM_STATUS GetModemStatus(void)
++{
++    ARM_USART_MODEM_STATUS status = { 0 };
++    return status;
++}
++
++void SWO_USART_IRQn_Handler(void)
++{
++    uint32_t sr = SWO_USART->SR;
++    uint32_t event = 0;
++    uint8_t data;
++
++    if (sr & (USART_SR_RXNE | USART_SR_ORE | USART_SR_FE | USART_SR_NE | USART_SR_PE)) {
++        // Reading DR after SR clears RXNE and the error flags
++        data = (uint8_t)SWO_USART->DR;
++
++        if (sr & USART_SR_ORE) {
++            rx_overflow = 1;
++            event |= ARM_USART_EVENT_RX_OVERFLOW;
++        }
++        if (sr & USART_SR_FE) {
++            event |= ARM_USART_EVENT_RX_FRAMING_ERROR;
++        }
++        if (sr & USART_SR_PE) {
++            event |= ARM_USART_EVENT_RX_PARITY_ERROR;
++        }
++
++        if (rx_busy) {
++            rx_buf[rx_cnt++] = data;
++            if (rx_cnt == rx_num) {
++                rx_busy = 0;
++                event |= ARM_USART_EVENT_RECEIVE_COMPLETE;
++            }
++        } else if (sr & USART_SR_RXNE) {
++            rx_overflow = 1;
++            event |= ARM_USART_EVENT_RX_OVERFLOW;
++        }
++    }
++
++    if (event && cb_event) {
++        cb_event(event);
++    }
++}
++
++ARM_DRIVER_USART Driver_USART1 = {
++    GetVersion,
++    GetCapabilities,
++    Initialize,
++    Uninitialize,
++    PowerControl,
++    Send,
++    Receive,
++    Transfer,
++    GetTxCount,
++    GetRxCount,
++    Control,
++    GetStatus,
++    SetModemControl,
++    GetModemStatus,
++};
++
++#endif
