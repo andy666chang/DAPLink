@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DAPLink Zephyr Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+
+            // GDB path
+            "gdbPath": "${env:ZEPHYR_SDK_INSTALL_DIR}/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb",
+
+            "executable": "${workspaceFolder}/build/zephyr/zephyr.elf",
+
+            "configFiles": [
+                // "interface/jlink.cfg",
+                "interface/cmsis-dap.cfg",
+                "target/stm32f1x.cfg"
+            ],
+            "openOCDLaunchCommands": ["transport select swd"],
+            "runToEntryPoint": "main",
+
+            // RTT log (build with -DEXTRA_CONF_FILE=debug.conf)
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "decoders": [{ "label": "RTT", "port": 0, "type": "console" }]
+            }
+        }
+    ]
+}

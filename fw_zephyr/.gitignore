@@ -1,0 +1,12 @@
+# User-specific files
+.venv
+.west
+
+# Build results
+build
+
+# SDK folder
+zephyr-rtos/*
+zephyr-sdk-*
+modules/
+firmware/

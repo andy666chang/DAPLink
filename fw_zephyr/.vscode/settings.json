@@ -1,0 +1,11 @@
+{
+    // File search settings
+    "search.useIgnoreFiles": false,
+    "search.useGlobalIgnoreFiles": false,
+
+    // Code Format settings
+    "clang-format.style": "{ BasedOnStyle: LLVM, IndentWidth: 4}",
+    "[c]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    }
+}

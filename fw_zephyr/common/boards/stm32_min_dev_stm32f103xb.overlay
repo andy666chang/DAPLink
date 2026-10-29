@@ -1,0 +1,173 @@
+/*
+ * DAPLink HIC (hardware/daplink) on stm32_min_dev (blue), STM32F103CB
+ *
+ * Shared by app (interface) and bootloader.
+ *
+ * Pin map follows DAPLink source/hic_hal/stm32/stm32f103xb/IO_Config.h
+ * and hardware/daplink/daplink.kicad_sch:
+ *   PB13  TGT_SWCLK
+ *   PB14  TGT_SWDIO (out)
+ *   PB12  TGT_SWDIO (in, via 4K7)
+ *   PB0   TGT_RST   (open drain)
+ *   PA2   TGT_RX    (USART2 TX -> target RX)
+ *   PA3   TGT_TX    (USART2 RX <- target TX)
+ *   PA10  TGT_SWO   (USART1 RX, SWO UART capture)
+ *   PB6   LED blue  (active low)  - IF: connected
+ *   PB5   LED green (active low)  - IF: CDC activity, BL: MSC activity
+ *   PA9   LED red   (active high) - IF: DAP activity
+ *   PA12  USB D+ fixed 1K5 pull-up (R15), no USB connect pin
+ *
+ * Memory map (DAPLink source/hic_hal/stm32/stm32f103xb/daplink_addr.h):
+ *   0x08000000  bootloader  47 KB
+ *   0x0800C000  interface   79 KB
+ *   0x0801FC00  config user 1 KB
+ *   0x20004F00  cfgram      256 B, shared BL <-> IF, not initialized
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	model = "DAPLink HIC (STM32F103CB)";
+
+	aliases {
+		/delete-property/ led0;
+	};
+
+	chosen {
+		/delete-property/ zephyr,console;
+		/delete-property/ zephyr,shell-uart;
+		/delete-property/ zephyr,osdp-uart;
+		daplink,target-uart = &usart2;
+		daplink,swo-uart = &usart1;
+	};
+
+	/delete-node/ leds;
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_connected: led_connected {
+			gpios = <&gpiob 6 GPIO_ACTIVE_LOW>;
+			label = "LED_CONNECTED";
+		};
+
+		led_cdc: led_cdc {
+			gpios = <&gpiob 5 GPIO_ACTIVE_LOW>;
+			label = "LED_CDC";
+		};
+
+		/* DAPLink PIN_MSC_LED, shared with CDC as in IO_Config.h */
+		led_msc: led_msc {
+			gpios = <&gpiob 5 GPIO_ACTIVE_LOW>;
+			label = "LED_MSC";
+		};
+
+		led_dap: led_dap {
+			gpios = <&gpioa 9 GPIO_ACTIVE_HIGH>;
+			label = "LED_DAP";
+		};
+	};
+
+	/* DAPLink settings.c config_ram, kept across BL <-> IF resets */
+	cfgram: memory@20004f00 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x20004f00 0x100>;
+		zephyr,memory-region = "cfgram";
+	};
+
+	zephyr,user {
+		swclk-gpios = <&gpiob 13 GPIO_ACTIVE_HIGH>;
+		swdio-out-gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
+		swdio-in-gpios = <&gpiob 12 GPIO_PULL_UP>;
+		nreset-gpios = <&gpiob 0 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+	};
+};
+
+/* DAPLink HIC uses STM32F103CB (128 KB), the base board describes a C8 */
+&flash0 {
+	reg = <0x08000000 DT_SIZE_K(128)>;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		bl_partition: partition@0 {
+			label = "bootloader";
+			reg = <0x00000000 0x0000bc00>;
+		};
+
+		if_partition: partition@c000 {
+			label = "interface";
+			reg = <0x0000c000 0x00013c00>;
+		};
+
+		config_partition: partition@1fc00 {
+			label = "config-user";
+			reg = <0x0001fc00 0x00000400>;
+		};
+	};
+};
+
+/* Remaining RAM after cfgram */
+&sram0 {
+	reg = <0x20000000 0x4f00>;
+};
+
+/*
+ * SWO UART capture, driven directly by src/swo_uart.c (CMSIS-Driver USART
+ * for DAPLink SWO.c). Kept "disabled" so the Zephyr serial driver does not
+ * claim it; only RX is used, PA9 (USART1 TX) is the red LED.
+ */
+&usart1 {
+	pinctrl-0 = <&usart1_rx_pa10>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+/* Pins shared with the DAPLink hardware, release them */
+&usart3 {
+	status = "disabled";
+};
+
+&i2c1 {
+	status = "disabled";
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&spi1 {
+	status = "disabled";
+};
+
+&adc1 {
+	status = "disabled";
+};
+
+&spi2 {
+	status = "disabled";
+};
+
+&timers1 {
+	status = "disabled";
+};
+
+&pwm1 {
+	status = "disabled";
+};
+
+/* Target UART */
+&usart2 {
+	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa3>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};

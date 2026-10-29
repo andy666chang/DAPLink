@@ -1,0 +1,6 @@
+/* Bootloader @ 0x08000000 */
+/ {
+	chosen {
+		zephyr,code-partition = &bl_partition;
+	};
+};

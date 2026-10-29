@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "DAPLink Zephyr"
+
+config APP_USB2UART
+	bool "USB CDC-ACM <-> target UART bridge"
+	default y
+	select SERIAL
+	select UART_INTERRUPT_DRIVEN
+	select UART_LINE_CTRL
+	select USB_CDC_ACM
+	select CDC_ACM_DTE_RATE_CALLBACK_SUPPORT
+	help
+	  Expose the target UART (zephyr,target-uart chosen node) as a
+	  USB virtual COM port, like DAPLink usb2uart.
+
+config APP_USB2UART_BUF_SIZE
+	int "USB2UART ring buffer size"
+	default 256
+	depends on APP_USB2UART
+
+config APP_SWO_UART
+	bool "SWO UART capture"
+	default y
+	help
+	  SWO trace capture on the "daplink,swo-uart" chosen USART (RX only),
+	  using DAPLink SWO.c with a CMSIS-Driver USART (src/swo_uart.c).
+
+config APP_SWO_BUFFER_SIZE
+	int "SWO trace buffer size (must be 2^n)"
+	default 4096
+	depends on APP_SWO_UART
+
+config APP_DAP_PACKET_COUNT
+	int "CMSIS-DAP packet buffer count"
+	default 4
+	range 1 255
+
+source "Kconfig.zephyr"

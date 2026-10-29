@@ -1,0 +1,6 @@
+/* Interface @ 0x0800C000, behind the bootloader (DAPLINK_ROM_IF_START) */
+/ {
+	chosen {
+		zephyr,code-partition = &if_partition;
+	};
+};
